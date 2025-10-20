@@ -1,11 +1,8 @@
 #pragma once
 #include <vector>
+#include "Board/Position.h"
 #include "Board/Cell.h"
 
-struct Position {
-    int x;
-    int y;
-};
 enum class Rotation { R0 = 0, R90 = 1, R180 = 2, R270 = 3 };
 
 class Block {
@@ -26,6 +23,7 @@ public:
     void rotateCCW();
     void move(int dx, int dy);
 
-    // Position getPosition() const { return position; }
-    std::vector<Position> getGlobalCells() const;
+    Position getPosition() const;
+    Cell getType() const;
+    std::vector<Position> getGlobalCellsAt(const Position& newPos) const;
 };

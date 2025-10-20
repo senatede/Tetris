@@ -1,5 +1,5 @@
 #pragma once
-#include "Commands/Command.h"
+#include "Command.h"
 
 class MoveLeftCommand final : public Command {
     MoveLeftCommand() = default;
