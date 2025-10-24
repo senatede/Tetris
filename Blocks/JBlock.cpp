@@ -1,5 +1,6 @@
 #include "JBlock.h"
 #include <array>
+#include <map>
 
 static constexpr std::array<std::array<Position, 4>, 4> J_BLOCK_SHAPES = {{
     // R0
@@ -15,6 +16,7 @@ static constexpr std::array<std::array<Position, 4>, 4> J_BLOCK_SHAPES = {{
 JBlock::JBlock(const Position p) : Block(p) {
     this->type = Cell::J;
     calculateShape();
+    SuperRotation = JLSTZ_WALL_KICK_DATA;
 }
 
 void JBlock::calculateShape() {

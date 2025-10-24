@@ -16,7 +16,10 @@ BlockFactory& BlockFactory::getInstance() {
 
 std::unique_ptr<Block> BlockFactory::createNextBlock(const Position& spawnPos) const {
     const Cell blockType = rng.next();
+    return createBlock(blockType, spawnPos);
+}
 
+std::unique_ptr<Block> BlockFactory::createBlock(const Cell blockType, const Position& spawnPos) {
     switch (blockType) {
         case Cell::I: return std::make_unique<IBlock>(spawnPos);
         case Cell::O: return std::make_unique<OBlock>(spawnPos);

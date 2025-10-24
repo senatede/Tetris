@@ -12,6 +12,14 @@ static constexpr std::array<std::array<Position, 4>, 4> S_BLOCK_SHAPES = {{
     {{ {-1, 1}, {-1, 0}, {0, 0}, {0, -1} }}
 }};
 
+SBlock::SBlock(const Position p)
+    : Block(p)
+{
+    this->type = Cell::S;
+    calculateShape();
+    SuperRotation = JLSTZ_WALL_KICK_DATA;
+}
+
 void SBlock::calculateShape() {
     int rotationIndex = static_cast<int>(rotation);
     this->shapeOffsets.assign(

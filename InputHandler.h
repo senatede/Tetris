@@ -1,17 +1,16 @@
 #pragma once
-
 #include <map>
 
-#include "GameEngine.h"
-#include "Commands/Command.h"
+class GameEngine;
+class Command;
 
-enum class KeyType { LEFT, RIGHT, ROTATE_CW, ROTATE_CCW, HARD_DROP, SOFT_DROP, PAUSE };
+enum class KeyType { LEFT, RIGHT, ROTATE_CW, ROTATE_CCW, HARD_DROP, SOFT_DROP, HOLD, PAUSE, RESUME };
 
 class InputHandler {
     GameEngine* engine = nullptr;
-    std::map<KeyType, std::unique_ptr<Command>> bindings;
+    std::map<KeyType, Command*> bindings;
 
-    InputHandler() = default;
+    InputHandler();
     ~InputHandler() = default;
 public:
     InputHandler(const InputHandler&) = delete;
@@ -20,6 +19,6 @@ public:
     static InputHandler& getInstance();
     void setGameEngine(GameEngine* gameEngine);
 
-    void bind(KeyType key, std::unique_ptr<Command> command);
+    void bind(KeyType key, Command* command);
     void handleKey(KeyType key);
 };

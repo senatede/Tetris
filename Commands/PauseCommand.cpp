@@ -8,6 +8,6 @@ PauseCommand& PauseCommand::getInstance() {
 
 void PauseCommand::execute() {
     if (engine) {
-        engine->requestMove(-1);
+        engine->pause();
     }
 }

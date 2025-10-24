@@ -18,6 +18,7 @@ TBlock::TBlock(const Position p)
 {
     this->type = Cell::T;
     calculateShape();
+    SuperRotation = JLSTZ_WALL_KICK_DATA;
 }
 
 void TBlock::calculateShape() {

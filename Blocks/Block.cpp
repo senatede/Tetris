@@ -6,6 +6,19 @@ Position Block::getPosition() const {
     return position;
 }
 
+void Block::setPosition(const Position pos) {
+    position = pos;
+}
+
+Rotation Block::getRotation() const {
+    return rotation;
+}
+
+void Block::resetRotation() {
+    rotation = Rotation::R0;
+    calculateShape();
+}
+
 Cell Block::getType() const {
     return type;
 }
@@ -42,4 +55,8 @@ std::vector<Position> Block::getGlobalCellsAt(const Position& newPos) const {
         globalPositions.push_back(absolutePos);
     }
     return globalPositions;
+}
+
+std::vector<Position> Block::getSuperRotationOffSets(Rotation from, Rotation to) const{
+    return SuperRotation.at({from, to});
 }

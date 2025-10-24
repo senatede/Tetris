@@ -15,6 +15,7 @@ static constexpr std::array<std::array<Position, 4>, 4> L_BLOCK_SHAPES = {{
 LBlock::LBlock(const Position p) : Block(p) {
     this->type = Cell::L;
     calculateShape();
+    SuperRotation = JLSTZ_WALL_KICK_DATA;
 }
 
 void LBlock::calculateShape() {

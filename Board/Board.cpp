@@ -1,6 +1,7 @@
 #include "Board.h"
+#include "../GameEngine.h"
 
-Board::Board(const int w = 10, const int h = 20) :
+Board::Board(const int w, const int h) :
     width(w),
     height(h),
     grid(h, std::vector<Cell>(w, Cell::Empty))
@@ -15,10 +16,39 @@ void Board::setGameEngine(GameEngine* gameEngine) {
     this->engine = gameEngine;
 }
 
+void Board::reset() {
+    grid = std::vector<std::vector<Cell>>(height, std::vector<Cell>(width, Cell::Empty));
+}
+
 Position Board::getSpawnPosition() const {
     const int spawnX = width / 2 - 1;
     const int spawnY = height - 2;
     return {spawnX, spawnY};
+}
+
+std::vector<std::vector<Cell>> Board::getRenderGrid(const Block* currentBlock) const {
+    auto renderGrid = grid;
+    if (currentBlock) {
+        const auto globalCells = currentBlock->getGlobalCellsAt(currentBlock->getPosition());
+        const Cell type = currentBlock->getType();
+
+        const auto ghostCells = currentBlock->getGlobalCellsAt(getGhostPosition(*currentBlock));
+        const Cell ghostType = ghostMap.at(type);
+        for (const auto& ghostCell : ghostCells) {
+            if (ghostCell.y >= 0 && ghostCell.y < height &&
+                ghostCell.x >= 0 && ghostCell.x < width) {
+                renderGrid[ghostCell.y][ghostCell.x] = ghostType;
+                }
+        }
+
+        for (const auto& cellPos : globalCells) {
+            if (cellPos.y >= 0 && cellPos.y < height &&
+                cellPos.x >= 0 && cellPos.x < width) {
+                    renderGrid[cellPos.y][cellPos.x] = type;
+                }
+        }
+    }
+    return renderGrid;
 }
 
 void Board::placeBlock(const Block& block) {
@@ -34,14 +64,12 @@ bool Board::isValidPosition(const Block& block, const Position& newPos) const {
     const std::vector<Position> globalCells = block.getGlobalCellsAt(newPos);
 
     for (const auto& cellPos : globalCells) {
-        if (cellPos.x < 0 || cellPos.x >= width || cellPos.y >= height) {
+        if (cellPos.x < 0 || cellPos.x >= width || cellPos.y >= height || cellPos.y < 0) {
             return false;
         }
 
-        if (cellPos.y >= 0) {
-            if (grid[cellPos.y][cellPos.x] != Cell::Empty) {
-                return false;
-            }
+        if (grid[cellPos.y][cellPos.x] != Cell::Empty) {
+            return false;
         }
     }
 
@@ -87,4 +115,11 @@ int Board::getDropDistance(const Block& block) const {
     }
 
     return distance;
+}
+
+Position Board::getGhostPosition(const Block& block) const {
+    const int dropDistance = getDropDistance(block);
+    Position pos = block.getPosition();
+    pos.y -= dropDistance;
+    return pos;
 }
