@@ -3,12 +3,13 @@
 class GameEngine;
 
 class ScoreManager {
-    long long score;
-    int level;
-    int totalLinesCleared;
+    long long score = 0;
+    int level = 1;
+    int LinesCleared = 0;
+    int totalLinesCleared = 0;
     GameEngine* engine = nullptr;
 public:
-    ScoreManager();
+    ScoreManager() = default;
     ScoreManager(const ScoreManager&) = delete;
     ScoreManager& operator=(const ScoreManager&) = delete;
 

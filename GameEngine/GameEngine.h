@@ -1,8 +1,8 @@
 #pragma once
 #include <vector>
 #include <memory>
-#include <cmath>
 #include <mutex>
+#include <chrono>
 
 class Board;
 class ScoreManager;
@@ -28,32 +28,43 @@ class GameEngine {
     bool hasHeldThisTurn = false;
     int peekNextN = 3;
 
+    // Soft lock:
+    std::chrono::time_point<std::chrono::steady_clock> lockTimeStart;
+    const std::chrono::milliseconds LOCK_DELAY = std::chrono::milliseconds(500);
+    bool isSoftLocked = false;
+    int lockResetCount = 0;
+    const int MAX_LOCK_RESETS = 15;
+
+    bool shouldRender = false;
     mutable std::recursive_mutex gameMutex;
 
-    GameEngine(int boardWidth, int boardHeight, InputHandler& input_handler, Timer& tick_timer, ScoreManager& score_manager);
+    GameEngine(int boardWidth, int boardHeight, InputHandler& input_handler, ScoreManager& score_manager);
     GameEngine(const GameEngine&) = delete;
     GameEngine& operator=(const GameEngine&) = delete;
 
     void spawnNextBlock();
 public:
-    static GameEngine& getInstance(int boardWidth, int boardHeight, InputHandler& input_handler, Timer& tick_timer, ScoreManager& score_manager);
+    static GameEngine& getInstance(int boardWidth, int boardHeight, InputHandler& input_handler, ScoreManager& score_manager);
 
-    void startGame();
+    void startGame(int level = 1);
     void pause();
     void resume();
     void tick();
     void reset();
 
-    void requestMove(int dx) const;
-    void requestRotate(bool clockwise) const;
+    void requestMove(int dx);
+    void requestRotate(bool clockwise);
     void requestHardDrop();
-    void requestSoftDrop() const;
+    void requestSoftDrop();
     void requestHold();
     void updateLevelSpeed() const;
 
     GameState getGameState() const;
     static int calculateGravityInterval(int level) ;
+
+    bool needsRender() const;
+    void markRender();
     std::vector<std::vector<Cell>> getRenderGrid() const;
-    std::vector<std::vector<Cell>> getRenderHold() const;
-    std::vector<std::vector<std::vector<Cell>>> getRenderNext() const;
+    std::vector<std::vector<Cell>> getRenderHold();
+    std::vector<std::vector<std::vector<Cell>>> getRenderNext();
 };

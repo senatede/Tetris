@@ -1,8 +1,6 @@
 #include "ScoreManager.h"
 #include "GameEngine.h"
 
-ScoreManager::ScoreManager() : score(0), level(1), totalLinesCleared(0) {}
-
 ScoreManager& ScoreManager::getInstance() {
     static ScoreManager instance;
     return instance;
@@ -15,11 +13,12 @@ void ScoreManager::setGameEngine(GameEngine* gameEngine) {
 void ScoreManager::reset() {
     score = 0;
     level = 1;
-    totalLinesCleared = 0;
+    LinesCleared = 0;
 }
 
 void ScoreManager::setLevel(const int newLevel) {
     if (newLevel > 0) this->level = newLevel;
+    engine->updateLevelSpeed();
 }
 
 void ScoreManager::addHardDropPoints(const int distance) {
@@ -43,9 +42,10 @@ void ScoreManager::addLineClear(const int linesCleared) {
         score += basePoints * level;
 
         totalLinesCleared += linesCleared;
-        const int newLevel = (totalLinesCleared / 10) + 1;
-        if (newLevel > level) {
-            level = newLevel;
+        LinesCleared += linesCleared;
+        if (LinesCleared >= 10) {
+            LinesCleared -= 10;
+            level++;
             engine->updateLevelSpeed();
         }
     }

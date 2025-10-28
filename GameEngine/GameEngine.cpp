@@ -8,7 +8,7 @@
 #include "Blocks/Block.h"
 #include "Timer.h"
 
-GameEngine::GameEngine(int boardWidth, int boardHeight, InputHandler& input_handler, Timer& tick_timer, ScoreManager& score_manager) :
+GameEngine::GameEngine(int boardWidth, int boardHeight, InputHandler& input_handler, ScoreManager& score_manager) :
     board(Board::getInstance(boardWidth, boardHeight)),
     scoreManager(score_manager),
     // storageManager(),
@@ -16,7 +16,7 @@ GameEngine::GameEngine(int boardWidth, int boardHeight, InputHandler& input_hand
     blockFactory(BlockFactory::getInstance()),
     holdBlock(nullptr),
     currentBlock(nullptr),
-    tickTimer(tick_timer),
+    tickTimer(Timer::getInstance()),
     gameState(GameState::IDLE)
 {
     board.setGameEngine(this);
@@ -25,8 +25,8 @@ GameEngine::GameEngine(int boardWidth, int boardHeight, InputHandler& input_hand
     tickTimer.setGameEngine(this);
 }
 
-GameEngine& GameEngine::getInstance(int boardWidth, int boardHeight, InputHandler& input_handler, Timer& tick_timer, ScoreManager& score_manager) {
-    static GameEngine instance(boardWidth, boardHeight, input_handler, tick_timer, score_manager);
+GameEngine& GameEngine::getInstance(const int boardWidth, const int boardHeight, InputHandler& input_handler, ScoreManager& score_manager) {
+    static GameEngine instance(boardWidth, boardHeight, input_handler, score_manager);
     return instance;
 }
 
@@ -42,9 +42,10 @@ void GameEngine::reset() {
 }
 
 
-void GameEngine::startGame() {
+void GameEngine::startGame(const int level) {
     std::lock_guard lock(gameMutex);
     reset();
+    scoreManager.setLevel(level);
     gameState = GameState::RUNNING;
 
     currentBlock = nullptr;
@@ -72,6 +73,15 @@ void GameEngine::spawnNextBlock() {
         gameState = GameState::GAME_OVER;
         std::thread([this]{ tickTimer.stop(); }).detach();
     }
+    isSoftLocked = false;
+    shouldRender = true;
+}
+
+bool GameEngine::needsRender() const {
+    return shouldRender;
+}
+void GameEngine::markRender() {
+    shouldRender = false;
 }
 
 std::vector<std::vector<Cell>> GameEngine::getRenderGrid() const {
@@ -89,16 +99,25 @@ void GameEngine::tick() {
 
     if (board.isValidPosition(*currentBlock, pos)) {
         currentBlock->move(0, -1);
+    } else if (!isSoftLocked) {
+        isSoftLocked = true;
+        lockTimeStart = std::chrono::steady_clock::now();
+        lockResetCount = 0;
     } else {
-        board.placeBlock(*currentBlock);
-        const int linesCleared = board.clearFullLines();
-        scoreManager.addLineClear(linesCleared);
+         auto elapsed = std::chrono::steady_clock::now() - lockTimeStart;
+        if (elapsed >= LOCK_DELAY) {
 
-        spawnNextBlock();
+            board.placeBlock(*currentBlock);
+            scoreManager.addLineClear(board.clearFullLines());
+
+            spawnNextBlock();
+
+        }
     }
+    shouldRender = true;
 }
 
-void GameEngine::requestMove(const int dx) const {
+void GameEngine::requestMove(const int dx) {
     std::lock_guard lock(gameMutex);
     if (gameState != GameState::RUNNING) return;
     if (!currentBlock) return;
@@ -108,10 +127,16 @@ void GameEngine::requestMove(const int dx) const {
 
     if (board.isValidPosition(*currentBlock, targetPos)) {
         currentBlock->move(dx, 0);
+
+        if (isSoftLocked && lockResetCount < MAX_LOCK_RESETS) {
+            lockTimeStart = std::chrono::steady_clock::now();
+            lockResetCount++;
+        }
     }
+    shouldRender = true;
 }
 
-void GameEngine::requestRotate(const bool clockwise) const {
+void GameEngine::requestRotate(const bool clockwise) {
     std::lock_guard lock(gameMutex);
     if (gameState != GameState::RUNNING) return;
     if (!currentBlock) return;
@@ -126,12 +151,26 @@ void GameEngine::requestRotate(const bool clockwise) const {
 
     Position position = currentBlock->getPosition();
 
-    if (board.isValidPosition(*currentBlock, position)) return;
+    if (board.isValidPosition(*currentBlock, position)) {
+        shouldRender = true;
+
+        if (isSoftLocked && lockResetCount < MAX_LOCK_RESETS) {
+            lockTimeStart = std::chrono::steady_clock::now();
+            lockResetCount++;
+        }
+        return;
+    }
 
     for (auto offset : currentBlock->getSuperRotationOffSets(oldRotation, newRotation)) {
         Position newPosition = {position.x + offset.x, position.y + offset.y};
         if (board.isValidPosition(*currentBlock, newPosition)) {
             currentBlock->move(offset.x, offset.y);
+            shouldRender = true;
+
+            if (isSoftLocked && lockResetCount < MAX_LOCK_RESETS) {
+                lockTimeStart = std::chrono::steady_clock::now();
+                lockResetCount++;
+            }
             return;
         }
     }
@@ -140,7 +179,6 @@ void GameEngine::requestRotate(const bool clockwise) const {
         currentBlock->rotateCCW();
     else
         currentBlock->rotateCW();
-
 }
 
 
@@ -160,10 +198,11 @@ void GameEngine::requestHardDrop() {
 
         scoreManager.addLineClear(board.clearFullLines());
         spawnNextBlock();
+        shouldRender = true;
     }
 }
 
-void GameEngine::requestSoftDrop() const {
+void GameEngine::requestSoftDrop() {
     std::lock_guard lock(gameMutex);
     if (gameState != GameState::RUNNING) return;
     if (!currentBlock) return;
@@ -174,30 +213,33 @@ void GameEngine::requestSoftDrop() const {
         currentBlock->move(0, -1);
 
         scoreManager.addSoftDropPoints();
+        shouldRender = true;
     }
 }
 
 void GameEngine::pause() {
-    std::lock_guard<std::recursive_mutex> lock(gameMutex);
+    std::lock_guard lock(gameMutex);
     if (gameState == GameState::RUNNING) {
         tickTimer.stop();
         gameState = GameState::PAUSED;
+        shouldRender = true;
     }
 }
 
 void GameEngine::resume() {
-    std::lock_guard<std::recursive_mutex> lock(gameMutex);
+    std::lock_guard lock(gameMutex);
     if (gameState == GameState::PAUSED) {
         gameState = GameState::RUNNING;
 
         const int level = scoreManager.getLevel();
         const int currentInterval = calculateGravityInterval(level);
         tickTimer.start(currentInterval);
+        shouldRender = true;
     }
 }
 
 void GameEngine::requestHold() {
-    std::lock_guard<std::recursive_mutex> lock(gameMutex);
+    std::lock_guard lock(gameMutex);
     if (gameState != GameState::RUNNING) return;
     if (!currentBlock || hasHeldThisTurn) return;
     hasHeldThisTurn = true;
@@ -216,6 +258,7 @@ void GameEngine::requestHold() {
         holdBlock = std::move(tempBlock);
         holdBlock->resetRotation();
     }
+    shouldRender = true;
 }
 
 int GameEngine::calculateGravityInterval(const int level) {
@@ -234,17 +277,18 @@ void GameEngine::updateLevelSpeed() const {
     tickTimer.setInterval(newInterval);
 }
 
-std::vector<std::vector<Cell>> GameEngine::getRenderHold() const {
+std::vector<std::vector<Cell>> GameEngine::getRenderHold() {
     auto cells = std::vector(2, std::vector(4, Cell::Empty));
     if (holdBlock) {
-        auto type = holdBlock->getType();
+        const auto type = holdBlock->getType();
         for (auto pos : holdBlock->getGlobalCellsAt({1, 0}))
             cells[pos.y][pos.x] = type;
     }
+    shouldRender = true;
     return cells;
 }
 
-std::vector<std::vector<std::vector<Cell>>> GameEngine::getRenderNext() const {
+std::vector<std::vector<std::vector<Cell>>> GameEngine::getRenderNext() {
     auto blocksTypes = blockFactory.peekNext(3);
     std::vector<std::vector<std::vector<Cell>>> blocks;
     for (auto blockType : blocksTypes) {
@@ -254,5 +298,6 @@ std::vector<std::vector<std::vector<Cell>>> GameEngine::getRenderNext() const {
             cells[pos.y][pos.x] = blockType;
         blocks.emplace_back(cells);
     }
+    shouldRender = true;
     return blocks;
 }
