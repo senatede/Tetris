@@ -2,7 +2,7 @@
 
 #include "GameEngine.h"
 #include "Board/Board.h"
-#include "ScoreManager.h"
+#include "ScoreManagement/ScoreManager.h"
 #include "InputHandler.h"
 #include "BlockFactory/BlockFactory.h"
 #include "Blocks/Block.h"

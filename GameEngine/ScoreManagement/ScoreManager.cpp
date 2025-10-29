@@ -1,5 +1,7 @@
 #include "ScoreManager.h"
-#include "GameEngine.h"
+#include "../GameEngine.h"
+
+ScoreManager::ScoreManager() : leaderboard(Leaderboard::getInstance()) {}
 
 ScoreManager& ScoreManager::getInstance() {
     static ScoreManager instance;
@@ -33,10 +35,22 @@ void ScoreManager::addLineClear(const int linesCleared) {
     if (linesCleared > 0) {
         long long basePoints = 0;
         switch (linesCleared) {
-            case 1: basePoints = 100; break;
-            case 2: basePoints = 300; break;
-            case 3: basePoints = 500; break;
-            case 4: basePoints = 800; break;
+            case 1:
+                basePoints = 100;
+                BackToBackTetrisPossibility = false;
+                break;
+            case 2:
+                basePoints = 300;
+                BackToBackTetrisPossibility = false;
+                break;
+            case 3:
+                basePoints = 500;
+                BackToBackTetrisPossibility = false;
+                break;
+            case 4:
+                basePoints = BackToBackTetrisPossibility ? 1200 : 800;
+                BackToBackTetrisPossibility = true;
+                break;
             default: basePoints = 0;
         }
         score += basePoints * level;
@@ -54,3 +68,12 @@ void ScoreManager::addLineClear(const int linesCleared) {
 long long ScoreManager::getScore() const { return score; }
 int ScoreManager::getLevel() const { return level; }
 int ScoreManager::getTotalLinesCleared() const { return totalLinesCleared; }
+
+bool ScoreManager::isAGoodScore() const { return leaderboard.isAGoodScore(score); }
+bool ScoreManager::isANewRecord() const { return leaderboard.isANewRecord(score); }
+void ScoreManager::saveScore(const std::string& name) const {
+    leaderboard.addEntry(name, score);
+    leaderboard.save();
+}
+
+std::vector<LeaderboardEntry> ScoreManager::getLeaderboard() const { return leaderboard.getEntries(); };

@@ -1,13 +1,5 @@
 #include "InputHandler.h"
-#include "Commands/MoveLeftCommand.h"
-#include "Commands/MoveRightCommand.h"
-#include "Commands/RotateCWCommand.h"
-#include "Commands/RotateCCWCommand.h"
-#include "Commands/HardDropCommand.h"
-#include "Commands/SoftDropCommand.h"
-#include "Commands/HoldCommand.h"
-#include "Commands/PauseCommand.h"
-#include "Commands/ResumeCommand.h"
+#include "Commands/Commands.h"
 
 InputHandler::InputHandler() {
     bind(KeyType::LEFT, &MoveLeftCommand::getInstance());
