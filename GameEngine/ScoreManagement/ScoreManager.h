@@ -1,4 +1,5 @@
 #pragma once
+#include "Leaderboard.h"
 
 class GameEngine;
 
@@ -7,9 +8,11 @@ class ScoreManager {
     int level = 1;
     int LinesCleared = 0;
     int totalLinesCleared = 0;
+    bool BackToBackTetrisPossibility = false;
     GameEngine* engine = nullptr;
+    Leaderboard& leaderboard;
 public:
-    ScoreManager() = default;
+    ScoreManager();
     ScoreManager(const ScoreManager&) = delete;
     ScoreManager& operator=(const ScoreManager&) = delete;
 
@@ -25,4 +28,10 @@ public:
     long long getScore() const;
     int getLevel() const;
     int getTotalLinesCleared() const;
+
+    bool isAGoodScore() const;
+    bool isANewRecord() const;
+    void saveScore(const std::string& name) const;
+
+    std::vector<LeaderboardEntry> getLeaderboard() const;
 };
