@@ -1,6 +1,6 @@
 #include "CLI.h"
 #include "../GameEngine/InputHandler.h"
-#include "../GameEngine/ScoreManager.h"
+#include "../GameEngine/ScoreManagement/ScoreManager.h"
 #include "../GameEngine/Board/Cell.h"
 
 #include <iostream>
@@ -46,7 +46,7 @@ void CLI::setTerminalRawBlocking() {
 void CLI::restoreTerminal() {
     tcsetattr(STDIN_FILENO, TCSANOW, &old_term);
 }
-void CLI::handleSigint(int) {
+void CLI::handleSigint(int)  {
     (void)int();
     running.store(false);
     restoreTerminal();
@@ -104,7 +104,7 @@ int CLI::getTerminalWidth() {
     }
     return w.ws_col;
 }
-std::string CLI::repeat(const std::string& s, const int n) {
+std::string CLI::repeat(const std::string& s, const size_t n) {
     std::string result;
     for (int i = 0; i < n; ++i) result += s;
     return result;
@@ -141,18 +141,24 @@ void CLI::startScreen() const {
     print_in_the_center(R"( \/   \___|\__|_|  |_|___/\/   )");
     std::cout << std::endl;
     print_in_the_center("Controls:");
-    print_in_the_center("(a)Left (d)Right (h)Hold");
-    print_in_the_center("(w)RotateCW (q)RotateCCW");
-    print_in_the_center("(Space)HardDrop (s)SoftDrop");
-    print_in_the_center("(p)Pause (r)Resume (x)Quit");
     std::cout << std::endl;
-    print_in_the_center("PRESS 's' TO START");
+    print_in_the_center("(A)Left   (D)Right  (H)Hold ");
+    print_in_the_center("(W)RotateCW    (Q)RotateCCW");
+    print_in_the_center("(Space)HardDrop (S)SoftDrop");
+    print_in_the_center("(P)Pause  (R)Resume (X)Quit");
+    print_in_the_center("(L) to see the leaderboard.");
+    std::cout << std::endl;
+    print_in_the_center("PRESS 'Enter' TO START");
     std::cout << "\n\n\n\n\n";
     char c;
     while (true) {
         if (popKey(c)) {
-            if (tolower(c) == 's') {
+            if (c == '\n') {
                 playLoop();
+                return;
+            }
+            if (tolower(c) == 'l') {
+                leaderboardScreen();
                 return;
             }
             if (tolower(c) == 'x') {
@@ -163,10 +169,8 @@ void CLI::startScreen() const {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 }
-
 void CLI::playLoop() const {
     gameEngine.startGame();
-
 
     auto nextFrameTime = std::chrono::steady_clock::now();
     while (running.load()) {
@@ -204,6 +208,7 @@ void CLI::playLoop() const {
                 case GameState::RUNNING:
                     drawBoard(); break;
                 case GameState::GAME_OVER:
+                    saveScoreScreen();
                     gameOverScreen();
                     return;
                 default: break;
@@ -222,8 +227,9 @@ void CLI::pausedScreen() const {
         print_in_the_center("▌ ▀▌▛▛▌█▌  ▙▌▀▌▌▌▛▘█▌▛▌", 20);
         print_in_the_center("▙▌█▌▌▌▌▙▖  ▌ █▌▙▌▄▌▙▖▙▌", 20);
         std::cout << std::endl;
-        print_in_the_center("Press 'r' to resume.");
-        print_in_the_center("Or 'x' to quit.");
+        print_in_the_center("Press 'R' to resume");
+        print_in_the_center("'L' for leaderboard");
+        print_in_the_center("Or 'X' to quit.");
         std::cout << "\n\n\n\n\n";
 
         char c;
@@ -232,6 +238,10 @@ void CLI::pausedScreen() const {
                 if (tolower(c) == 'r') {
                     inputHandler.handleKey(KeyType::RESUME);
                     return;
+                }
+                if (tolower(c) == 'l') {
+                    leaderboardScreen();
+                    break;
                 }
                 if (tolower(c) == 'x') {
                     quittingScreen();
@@ -300,6 +310,106 @@ void CLI::quittingScreen() const {
     }
 
 }
+void CLI::leaderboardScreen() const {
+    clearScreen();
+    std::cout << "\n\n\n\n\n";
+    print_in_the_center("▖ ▄▖▄▖▄ ▄▖▄▖▄ ▄▖▄▖▄▖▄ ", 22);
+    print_in_the_center("▌ ▙▖▌▌▌▌▙▖▙▘▙▘▌▌▌▌▙▘▌▌", 22);
+    print_in_the_center("▙▖▙▖▛▌▙▘▙▖▌▌▙▘▙▌▛▌▌▌▙▘", 22);
+
+    auto leaderboard = scoreManager.getLeaderboard();
+    size_t longest_name = 0, longest_score = 0;
+    for (const auto& [name, score] : leaderboard) {
+        longest_name = std::max(longest_name, name.length());
+        longest_score = std::max(longest_score, std::to_string(score).length());
+    }
+
+    size_t width = 5+longest_name+1+longest_score+1;
+    print_in_the_center("╔═══╦" + repeat("═", longest_name) + + "╦" + repeat("═", longest_score) + "╗", width);
+    for (size_t index = 0; index < leaderboard.size(); index++) {
+        std::string name = leaderboard[index].playerName;
+        std::string score = std::to_string(leaderboard[index].score);
+
+        std::string line = "║ " + std::to_string(index+1) + " ║" + name + repeat(" ", longest_name - name.length()) + "║" + repeat(" ", longest_score - score.length()) + score + "║";
+        print_in_the_center(line, width);
+        if (index != leaderboard.size() - 1) print_in_the_center("╠═══╬" + repeat("═", longest_name) + "╬" + repeat("═", longest_score) + "╣", width);
+    }
+    print_in_the_center("╚═══╩" + repeat("═", longest_name) + "╩" + repeat("═", longest_score) + "╝", width);
+
+    print_in_the_center("Press 'b' to go back.");
+    print_in_the_center("Or 'x' to quit.");
+    std::cout << "\n\n\n\n\n";
+
+    char c;
+    while (true) {
+        if (popKey(c)) {
+            if (tolower(c) == 'b') {
+                return;
+            }
+            if (tolower(c) == 'x') {
+                quittingScreen();
+                break;
+            }
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+}
+void CLI::saveScoreScreen() const {
+    if (!scoreManager.isAGoodScore()) return;
+    clearScreen();
+    std::cout << "\n\n\n";
+    if (scoreManager.isANewRecord()) {
+        print_in_the_center(" _  _ _____      __");
+        print_in_the_center(R"(| \| | __\ \    / /)");
+        print_in_the_center(R"(| .` | _| \ \/\/ / )");
+        print_in_the_center(R"(|_|\_|___| \_/\_/  )");
+        std::cout << std::endl;
+        print_in_the_center("___ ___ ___ ___  ___ ___  _ ");
+        print_in_the_center(R"(| _ \ __/ __/ _ \| _ \   \| |)");
+        print_in_the_center(R"(|   / _| (_| (_) |   / |) |_|)");
+        print_in_the_center(R"(|_|_\___\___\___/|_|_\___/(_))");
+    }
+    else {
+        print_in_the_center(" _  _ _____      __");
+        print_in_the_center(R"(| \| | __\ \    / /)");
+        print_in_the_center(R"(| .` | _| \ \/\/ / )");
+        print_in_the_center(R"(|_|\_|___| \_/\_/  )");
+        std::cout << std::endl;
+        print_in_the_center("_  _ ___ ___ _  _ ");
+        print_in_the_center(R"(| || |_ _/ __| || |)");
+        print_in_the_center(R"(| __ || | (_ | __ |)");
+        print_in_the_center(R"(|_||_|___\___|_||_|)");
+        std::cout << std::endl;
+        print_in_the_center("___  ___ ___  ___ ___ _ ");
+        print_in_the_center(R"(/ __|/ __/ _ \| _ \ __| |)");
+        print_in_the_center(R"(\__ \ (_| (_) |   / _||_|)");
+        print_in_the_center(R"(|___/\___\___/|_|_\___(_))");
+    }
+    std::cout << "\n  Enter your name: " << std::flush;;
+    std::string name;
+    char c;
+    while (name.length() < 15) {
+        if (popKey(c)) {
+            if (c == '\n') break;
+            if (c == 127 || c == 8) {
+                if (!name.empty()) {
+                    name.pop_back();
+                    std::cout << "\b \b" << std::flush;
+                }
+            }
+            else {
+                name += c;
+                std::cout << c << std::flush;
+            }
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    std::cout << std::flush;
+
+    scoreManager.saveScore(name);
+    leaderboardScreen();
+}
+
 
 std::string CLI::getCellChar(Cell cell) {
     const auto full_cell = "██";

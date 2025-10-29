@@ -48,7 +48,7 @@ class CLI {
     static void clearScreen();
     static int getTerminalWidth();
     static void print_in_the_center(const std::string& s, size_t len=0);
-    static std::string repeat(const std::string& s, int n);
+    static std::string repeat(const std::string& s, size_t n);
 
     void drawBoard() const;
 
@@ -56,9 +56,10 @@ class CLI {
     void gameOverScreen() const;
     void quittingScreen() const;
     void pausedScreen() const;
+    void leaderboardScreen() const;
+    void saveScoreScreen() const;
 
     void playLoop() const;
-
 public:
     CLI();
     void run();
