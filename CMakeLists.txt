@@ -17,8 +17,9 @@ add_executable(tetris
         CLI/CLI.cpp
         GameEngine/GameEngine.cpp
         GameEngine/Timer.cpp
-        GameEngine/ScoreManager.cpp
         GameEngine/InputHandler.cpp
+        GameEngine/ScoreManagement/ScoreManager.cpp
+        GameEngine/ScoreManagement/Leaderboard.cpp
         GameEngine/Commands/Command.cpp
         GameEngine/Commands/MoveRightCommand.cpp
         GameEngine/Commands/PauseCommand.cpp
