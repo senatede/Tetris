@@ -5,5 +5,5 @@ class OBlock final : public Block {
 protected:
     void calculateShape() override;
 public:
-    OBlock(Position p);
+    OBlock(Position p, Rotation r);
 };

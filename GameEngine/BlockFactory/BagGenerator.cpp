@@ -1,6 +1,8 @@
 #include "BagGenerator.h"
 #include <algorithm>
 
+#include "SnapshotManagement/Snapshot.h"
+
 
 BagGenerator::BagGenerator() : generator(static_cast<unsigned int>(std::time(nullptr))) {
     nextBag = generateNewBag();
@@ -10,6 +12,10 @@ BagGenerator::BagGenerator() : generator(static_cast<unsigned int>(std::time(nul
 BagGenerator& BagGenerator::getInstance() {
     static BagGenerator instance;
     return instance;
+}
+
+void BagGenerator::setBag(std::vector<Cell> newBag) {
+    bag = std::move(newBag);
 }
 
 std::vector<Cell> BagGenerator::generateNewBag() {

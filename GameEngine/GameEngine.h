@@ -4,8 +4,10 @@
 #include <mutex>
 #include <chrono>
 
+struct Snapshot;
 class Board;
 class ScoreManager;
+class StorageManager;
 class InputHandler;
 class BlockFactory;
 class Block;
@@ -13,12 +15,14 @@ class Timer;
 enum class Cell;
 struct Position;
 
-enum class GameState { IDLE, RUNNING, PAUSED, GAME_OVER };
+enum class GameState { IDLE, LOADED, RUNNING, PAUSED, GAME_OVER };
 
 class GameEngine {
+    int boardWidth, boardHeight;
+
     Board& board;
     ScoreManager& scoreManager;
-    // StorageManager storageManager;
+    StorageManager& storageManager;
     InputHandler& inputHandler;
     BlockFactory& blockFactory;
     std::unique_ptr<Block> holdBlock;
@@ -39,14 +43,16 @@ class GameEngine {
     mutable std::recursive_mutex gameMutex;
 
     GameEngine(int boardWidth, int boardHeight, InputHandler& input_handler, ScoreManager& score_manager);
-    GameEngine(const GameEngine&) = delete;
-    GameEngine& operator=(const GameEngine&) = delete;
+    ~GameEngine();
 
     void spawnNextBlock();
 public:
+    GameEngine(const GameEngine&) = delete;
+    GameEngine& operator=(const GameEngine&) = delete;
     static GameEngine& getInstance(int boardWidth, int boardHeight, InputHandler& input_handler, ScoreManager& score_manager);
 
-    void startGame(int level = 1);
+    void startNewGame(int level = 1);
+    void startGame();
     void pause();
     void resume();
     void tick();
@@ -57,9 +63,12 @@ public:
     void requestHardDrop();
     void requestSoftDrop();
     void requestHold();
+    void requestSave() const;
+    void requestLoad();
     void updateLevelSpeed() const;
 
     GameState getGameState() const;
+    std::pair<int, int> getBoardSize() const;
     static int calculateGravityInterval(int level) ;
 
     bool needsRender() const;
@@ -67,4 +76,7 @@ public:
     std::vector<std::vector<Cell>> getRenderGrid() const;
     std::vector<std::vector<Cell>> getRenderHold();
     std::vector<std::vector<std::vector<Cell>>> getRenderNext();
+
+    Snapshot createSnapshot() const;
+    void restoreFromSnapshot(const Snapshot& snapshot);
 };

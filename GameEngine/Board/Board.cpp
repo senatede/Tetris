@@ -26,6 +26,14 @@ Position Board::getSpawnPosition() const {
     return {spawnX, spawnY};
 }
 
+void Board::setGrid(const std::vector<std::vector<Cell>>& newGrid) {
+    grid = newGrid;
+}
+
+std::vector<std::vector<Cell>> Board::getGrid() const {
+    return grid;
+}
+
 std::vector<std::vector<Cell>> Board::getRenderGrid(const Block* currentBlock) const {
     auto renderGrid = grid;
     if (currentBlock) {

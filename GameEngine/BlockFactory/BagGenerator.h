@@ -2,6 +2,8 @@
 #include <random>
 #include "../Board/Cell.h"
 
+struct Snapshot;
+
 class BagGenerator {
     std::vector<Cell> bag;
     std::vector<Cell> nextBag;
@@ -16,6 +18,7 @@ class BagGenerator {
 public:
     static BagGenerator& getInstance();
 
+    void setBag(std::vector<Cell> newBag);
     Cell next();
     std::vector<Cell> peek(int count);
 };

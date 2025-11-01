@@ -5,5 +5,5 @@ class ZBlock final : public Block {
 protected:
     void calculateShape() override;
 public:
-    ZBlock(Position p);
+    ZBlock(Position p, Rotation r);
 };

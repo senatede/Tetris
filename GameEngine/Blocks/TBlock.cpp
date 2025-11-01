@@ -13,8 +13,7 @@ static constexpr std::array<std::array<Position, 4>, 4> T_BLOCK_SHAPES = {{
 }};
 
 
-TBlock::TBlock(const Position p)
-    : Block(p)
+TBlock::TBlock(const Position p, const Rotation r) : Block(p, r)
 {
     this->type = Cell::T;
     calculateShape();

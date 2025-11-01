@@ -12,8 +12,7 @@ static constexpr std::array<std::array<Position, 4>, 4> S_BLOCK_SHAPES = {{
     {{ {-1, 1}, {-1, 0}, {0, 0}, {0, -1} }}
 }};
 
-SBlock::SBlock(const Position p)
-    : Block(p)
+SBlock::SBlock(const Position p, const Rotation r) : Block(p, r)
 {
     this->type = Cell::S;
     calculateShape();

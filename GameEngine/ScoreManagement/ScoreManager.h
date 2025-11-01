@@ -1,6 +1,7 @@
 #pragma once
 #include "Leaderboard.h"
 
+struct Snapshot;
 class GameEngine;
 
 class ScoreManager {
@@ -18,6 +19,8 @@ public:
 
     static ScoreManager& getInstance();
     void setGameEngine(GameEngine* gameEngine);
+
+    void restoreFromSnapshot(const Snapshot& snapshot);
     
     void reset();
     void setLevel(int newLevel);

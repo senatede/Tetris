@@ -11,6 +11,8 @@ InputHandler::InputHandler() {
     bind(KeyType::HOLD, &HoldCommand::getInstance());
     bind(KeyType::PAUSE, &PauseCommand::getInstance());
     bind(KeyType::RESUME, &ResumeCommand::getInstance());
+    bind(KeyType::SAVE, &SaveCommand::getInstance());
+    bind(KeyType::LOAD, &LoadCommand::getInstance());
 }
 
 InputHandler& InputHandler::getInstance() {

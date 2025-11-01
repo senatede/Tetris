@@ -5,5 +5,5 @@ class JBlock final : public Block {
 protected:
     void calculateShape() override;
 public:
-    JBlock(Position p);
+    JBlock(Position p, Rotation r);
 };

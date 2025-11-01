@@ -22,6 +22,9 @@ public:
     static Board& getInstance(int w = 10, int h = 20);
     void setGameEngine(GameEngine* gameEngine);
 
+    void setGrid(const std::vector<std::vector<Cell>>& newGrid);
+    std::vector<std::vector<Cell>> getGrid() const;
+
     void reset();
     Position getSpawnPosition() const;
     std::vector<std::vector<Cell>> getRenderGrid(const Block* currentBlock) const;
