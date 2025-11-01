@@ -1,5 +1,6 @@
 #include "ScoreManager.h"
 #include "../GameEngine.h"
+#include "SnapshotManagement/Snapshot.h"
 
 ScoreManager::ScoreManager() : leaderboard(Leaderboard::getInstance()) {}
 
@@ -17,6 +18,13 @@ void ScoreManager::reset() {
     level = 1;
     LinesCleared = 0;
 }
+
+void ScoreManager::restoreFromSnapshot(const Snapshot &snapshot) {
+    score = snapshot.score;
+    level = snapshot.level;
+    totalLinesCleared = snapshot.totalLinesCleared;
+}
+
 
 void ScoreManager::setLevel(const int newLevel) {
     if (newLevel > 0) this->level = newLevel;

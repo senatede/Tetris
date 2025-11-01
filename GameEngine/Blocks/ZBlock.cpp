@@ -12,7 +12,7 @@ static constexpr std::array<std::array<Position, 4>, 4> Z_BLOCK_SHAPES = {{
     {{ {0, 1}, {-1, 0}, {0, 0}, {-1, -1} }}
 }};
 
-ZBlock::ZBlock(const Position p) : Block(p) {
+ZBlock::ZBlock(const Position p, const Rotation r) : Block(p, r) {
     this->type = Cell::Z;
     calculateShape();
     SuperRotation = JLSTZ_WALL_KICK_DATA;

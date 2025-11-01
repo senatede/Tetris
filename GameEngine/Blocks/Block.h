@@ -17,7 +17,7 @@ protected:
     virtual void calculateShape() = 0;
 
 public:
-    Block(Position p);
+    Block(Position p, Rotation r);
 
     virtual ~Block() = default;
 

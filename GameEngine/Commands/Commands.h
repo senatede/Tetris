@@ -9,3 +9,5 @@
 #include "HoldCommand.h"
 #include "PauseCommand.h"
 #include "ResumeCommand.h"
+#include "SaveCommand.h"
+#include "LoadCommand.h"

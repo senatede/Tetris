@@ -7,11 +7,15 @@
 #include "BlockFactory/BlockFactory.h"
 #include "Blocks/Block.h"
 #include "Timer.h"
+#include "SnapshotManagement/Snapshot.h"
+#include "SnapshotManagement/StorageManager.h"
 
-GameEngine::GameEngine(int boardWidth, int boardHeight, InputHandler& input_handler, ScoreManager& score_manager) :
+GameEngine::GameEngine(const int boardWidth, const int boardHeight, InputHandler& input_handler, ScoreManager& score_manager) :
+    boardWidth(boardWidth),
+    boardHeight(boardHeight),
     board(Board::getInstance(boardWidth, boardHeight)),
     scoreManager(score_manager),
-    // storageManager(),
+    storageManager(StorageManager::getInstance()),
     inputHandler(input_handler),
     blockFactory(BlockFactory::getInstance()),
     holdBlock(nullptr),
@@ -21,6 +25,7 @@ GameEngine::GameEngine(int boardWidth, int boardHeight, InputHandler& input_hand
 {
     board.setGameEngine(this);
     scoreManager.setGameEngine(this);
+    storageManager.setGameEngine(this);
     inputHandler.setGameEngine(this);
     tickTimer.setGameEngine(this);
 }
@@ -28,6 +33,11 @@ GameEngine::GameEngine(int boardWidth, int boardHeight, InputHandler& input_hand
 GameEngine& GameEngine::getInstance(const int boardWidth, const int boardHeight, InputHandler& input_handler, ScoreManager& score_manager) {
     static GameEngine instance(boardWidth, boardHeight, input_handler, score_manager);
     return instance;
+}
+
+GameEngine::~GameEngine() {
+    std::lock_guard lock(gameMutex);
+    tickTimer.stop();
 }
 
 void GameEngine::reset() {
@@ -42,7 +52,7 @@ void GameEngine::reset() {
 }
 
 
-void GameEngine::startGame(const int level) {
+void GameEngine::startNewGame(const int level) {
     std::lock_guard lock(gameMutex);
     reset();
     scoreManager.setLevel(level);
@@ -59,8 +69,21 @@ void GameEngine::startGame(const int level) {
     tickTimer.start(startInterval);
 }
 
+void GameEngine::startGame() {
+    std::lock_guard lock(gameMutex);
+    gameState = GameState::RUNNING;
+
+    const int startLevel = scoreManager.getLevel();
+    const int startInterval = calculateGravityInterval(startLevel);
+    tickTimer.start(startInterval);
+}
+
 GameState GameEngine::getGameState() const {
     return gameState.load();
+}
+
+std::pair<int, int> GameEngine::getBoardSize() const {
+    return std::make_pair(boardWidth, boardHeight);
 }
 
 void GameEngine::spawnNextBlock() {
@@ -261,6 +284,23 @@ void GameEngine::requestHold() {
     shouldRender = true;
 }
 
+void GameEngine::requestSave() const {
+    std::lock_guard lock(gameMutex);
+    if (gameState.load() != GameState::IDLE && gameState.load() != GameState::PAUSED) return;
+
+    storageManager.saveGame();
+}
+
+void GameEngine::requestLoad() {
+    std::lock_guard lock(gameMutex);
+
+    if (const std::unique_ptr<Snapshot> loadedState = storageManager.loadGame()) {
+        restoreFromSnapshot(*loadedState);
+        gameState = GameState::LOADED;
+    }
+
+}
+
 int GameEngine::calculateGravityInterval(const int level) {
     auto interval = static_cast<int>(1000 * pow((0.8 - (level - 1.0) / 250.0), level - 1));
     if (interval <= 0) return 1;
@@ -293,11 +333,60 @@ std::vector<std::vector<std::vector<Cell>>> GameEngine::getRenderNext() {
     std::vector<std::vector<std::vector<Cell>>> blocks;
     for (auto blockType : blocksTypes) {
         auto cells = std::vector(2, std::vector(4, Cell::Empty));
-        auto block = BlockFactory::createBlock(blockType, {0, 0});
+        auto block = BlockFactory::createBlock(blockType);
         for (auto pos : block->getGlobalCellsAt({1, 0}))
             cells[pos.y][pos.x] = blockType;
         blocks.emplace_back(cells);
     }
     shouldRender = true;
     return blocks;
+}
+
+Snapshot GameEngine::createSnapshot() const {
+    Snapshot snapshot{};
+
+    snapshot.grid = board.getGrid();
+    snapshot.score = scoreManager.getScore();
+    snapshot.level = scoreManager.getLevel();
+    snapshot.totalLinesCleared = scoreManager.getTotalLinesCleared();
+
+    if (currentBlock) {
+        snapshot.currentBlockType = currentBlock->getType();
+        snapshot.currentBlockPosition = currentBlock->getPosition();
+        snapshot.currentBlockRotation = currentBlock->getRotation();
+    } else
+        snapshot.currentBlockType = Cell::Empty;
+
+    if (holdBlock) {
+        snapshot.holdBlockType = holdBlock->getType();
+    } else
+        snapshot.holdBlockType = Cell::Empty;
+
+    snapshot.bag = blockFactory.peekNext(7);
+
+    return snapshot;
+}
+
+void GameEngine::restoreFromSnapshot(const Snapshot& snapshot) {
+    reset();
+
+    board.setGrid(snapshot.grid);
+    scoreManager.restoreFromSnapshot(snapshot);
+
+    if (snapshot.currentBlockType != Cell::Empty) {
+        currentBlock = BlockFactory::createBlock(
+            snapshot.currentBlockType,
+            snapshot.currentBlockPosition,
+            snapshot.currentBlockRotation
+        );
+    } else
+        currentBlock.reset();
+
+    if (snapshot.holdBlockType != Cell::Empty) {
+        holdBlock = BlockFactory::createBlock(snapshot.holdBlockType);
+    } else
+        holdBlock.reset();
+
+    blockFactory.loadFromSnapshot(snapshot);
+    shouldRender = true;
 }

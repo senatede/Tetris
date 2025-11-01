@@ -1,6 +1,6 @@
 #include "Block.h"
 
-Block::Block(const Position p) : position(p), rotation(Rotation::R0), type(Cell::Empty){}
+Block::Block(const Position p, const Rotation r) : position(p), rotation(r), type(Cell::Empty){}
 
 Position Block::getPosition() const {
     return position;

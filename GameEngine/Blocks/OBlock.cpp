@@ -1,7 +1,6 @@
 #include "OBlock.h"
 
-OBlock::OBlock(const Position p)
-    : Block(p)
+OBlock::OBlock(const Position p, const Rotation r) : Block(p, r)
 {
     this->type = Cell::O;
     calculateShape();

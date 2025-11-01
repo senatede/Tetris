@@ -5,5 +5,5 @@ class SBlock final : public Block {
 protected:
     void calculateShape() override;
 public:
-    SBlock(Position p);
+    SBlock(Position p, Rotation r);
 };

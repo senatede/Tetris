@@ -40,8 +40,8 @@ static const std::map<std::pair<Rotation, Rotation>, std::vector<Position>> I_WA
     } },
 };
 
-IBlock::IBlock(const Position p)
-    : Block(p)
+IBlock::IBlock(const Position p, const Rotation r)
+    : Block(p, r)
 {
     this->type = Cell::I;
     calculateShape();

@@ -5,5 +5,5 @@ class TBlock final : public Block {
 protected:
     void calculateShape() override;
 public:
-    TBlock(Position p);
+    TBlock(Position p, Rotation r);
 };

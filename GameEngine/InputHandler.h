@@ -4,7 +4,7 @@
 class GameEngine;
 class Command;
 
-enum class KeyType { LEFT, RIGHT, ROTATE_CW, ROTATE_CCW, HARD_DROP, SOFT_DROP, HOLD, PAUSE, RESUME };
+enum class KeyType { LEFT, RIGHT, ROTATE_CW, ROTATE_CCW, HARD_DROP, SOFT_DROP, HOLD, PAUSE, RESUME, SAVE, LOAD};
 
 class InputHandler {
     GameEngine* engine = nullptr;

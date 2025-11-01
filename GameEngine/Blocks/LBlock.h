@@ -5,5 +5,5 @@ class LBlock final : public Block {
 protected:
     void calculateShape() override;
 public:
-    LBlock(Position p);
+    LBlock(Position p, Rotation r);
 };
