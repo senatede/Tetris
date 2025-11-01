@@ -146,7 +146,7 @@ void CLI::startScreen() const {
     print_in_the_center("(W)RotateCW    (Q)RotateCCW");
     print_in_the_center("(Space)HardDrop (S)SoftDrop");
     print_in_the_center("(P)Pause  (R)Resume (X)Quit");
-    print_in_the_center("(L) to see the leaderboard.");
+    print_in_the_center("(L)Leaderboard (G)Load game");
     std::cout << std::endl;
     print_in_the_center("PRESS 'Enter' TO START");
     std::cout << "\n\n\n\n\n";
@@ -154,11 +154,16 @@ void CLI::startScreen() const {
     while (true) {
         if (popKey(c)) {
             if (c == '\n') {
+                gameEngine.startNewGame();
                 playLoop();
                 return;
             }
             if (tolower(c) == 'l') {
                 leaderboardScreen();
+                return;
+            }
+            if (tolower(c) == 'g') {
+                loadGameScreen();
                 return;
             }
             if (tolower(c) == 'x') {
@@ -170,8 +175,6 @@ void CLI::startScreen() const {
     }
 }
 void CLI::playLoop() const {
-    gameEngine.startGame();
-
     auto nextFrameTime = std::chrono::steady_clock::now();
     while (running.load()) {
         char k = '\0';
@@ -217,9 +220,10 @@ void CLI::playLoop() const {
         }
         nextFrameTime += std::chrono::microseconds(1000000 / FPS);
         std::this_thread::sleep_until(nextFrameTime);
-        }
     }
+}
 void CLI::pausedScreen() const {
+    bool saved = false;
     while (true) {
         clearScreen();
         std::cout << "\n\n\n\n\n";
@@ -227,10 +231,17 @@ void CLI::pausedScreen() const {
         print_in_the_center("▌ ▀▌▛▛▌█▌  ▙▌▀▌▌▌▛▘█▌▛▌", 20);
         print_in_the_center("▙▌█▌▌▌▌▙▖  ▌ █▌▙▌▄▌▙▖▙▌", 20);
         std::cout << std::endl;
-        print_in_the_center("Press 'R' to resume");
-        print_in_the_center("'L' for leaderboard");
-        print_in_the_center("Or 'X' to quit.");
-        std::cout << "\n\n\n\n\n";
+        print_in_the_center("Current Stats:");
+        std::cout << std::endl;
+        print_in_the_center("Score: " + std::to_string(scoreManager.getScore()));
+        print_in_the_center("Level: " + std::to_string(scoreManager.getLevel()));
+        print_in_the_center("Lines: " + std::to_string(scoreManager.getTotalLinesCleared()));
+        std::cout << "\n\n";
+        print_in_the_center("Controls:");
+        print_in_the_center("(R)esume   (S)ave game");
+        print_in_the_center("(L)eaderboard  (X)quit");
+        std::cout << "\n\n";
+        if (saved) print_in_the_center("Saved!");
 
         char c;
         while (true) {
@@ -238,6 +249,11 @@ void CLI::pausedScreen() const {
                 if (tolower(c) == 'r') {
                     inputHandler.handleKey(KeyType::RESUME);
                     return;
+                }
+                if (tolower(c) == 's') {
+                    inputHandler.handleKey(KeyType::SAVE);
+                    saved = true;
+                    break;
                 }
                 if (tolower(c) == 'l') {
                     leaderboardScreen();
@@ -260,8 +276,11 @@ void CLI::gameOverScreen() const {
     print_in_the_center("▙▌█▌▌▌▌▙▖  ▙▌▚▘▙▖▌ ▖", 20);
     std::cout << std::endl;
     print_in_the_center("Final Score: " + std::to_string(scoreManager.getScore()));
-    print_in_the_center( "Level: " + std::to_string(scoreManager.getLevel()));
-    print_in_the_center( "Play again? (y/n): ");
+    print_in_the_center("Level: " + std::to_string(scoreManager.getLevel()));
+    print_in_the_center("Lines Cleared: " + std::to_string(scoreManager.getTotalLinesCleared()));
+    std::cout << std::endl;
+    print_in_the_center("Play again?");
+    print_in_the_center("(Y)es  (N)o");
     std::cout << "\n\n\n\n\n";
     char c;
     while (true) {
@@ -289,7 +308,7 @@ void CLI::quittingScreen() const {
     print_in_the_center("▚▚▘█▌▌▌▐▖  ▐▖▙▌  ▙▌▙▌▌▐▖▗ ", 26);
     print_in_the_center("                  ▌       ", 26);
     std::cout << std::endl;
-    print_in_the_center("Press 'y' or 'n'");
+    print_in_the_center("(Y)es   (N)o");
     std::cout << "\n\n\n\n\n";
 
     char c;
@@ -409,6 +428,49 @@ void CLI::saveScoreScreen() const {
     scoreManager.saveScore(name);
     leaderboardScreen();
 }
+void CLI::loadGameScreen() const {
+    clearScreen();
+
+    inputHandler.handleKey(KeyType::LOAD);
+    if (gameEngine.getGameState() == GameState::LOADED) {
+        std::cout << "\n\n\n\n\n";
+        print_in_the_center("Loaded Successfully");
+        print_in_the_center("PRESS 'Enter' TO START");
+        print_in_the_center("OR 'X' to quit.");
+        std::cout << "\n\n\n\n\n";
+        char c;
+        while (true) {
+            if (popKey(c)) {
+                if (c == '\n') {
+                    gameEngine.startGame();
+                    playLoop();
+                    return;
+                }
+                if (tolower(c) == 'x') {
+                    quittingScreen();
+                    return;
+                }
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+    }
+    std::cout << "\n\n\n\n\n";
+    print_in_the_center("INCORRECT FILE");
+    print_in_the_center("(B)Back (X)Quit");
+    std::cout << "\n\n\n\n\n";
+    char c;
+    while (true) {
+        if (popKey(c)) {
+            if (c == 'b') return;
+            if (tolower(c) == 'x') {
+                quittingScreen();
+                return;
+            }
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+}
+
 
 
 std::string CLI::getCellChar(Cell cell) {

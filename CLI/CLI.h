@@ -58,6 +58,7 @@ class CLI {
     void pausedScreen() const;
     void leaderboardScreen() const;
     void saveScoreScreen() const;
+    void loadGameScreen() const;
 
     void playLoop() const;
 public:
