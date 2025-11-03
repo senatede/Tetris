@@ -35,6 +35,18 @@ GameEngine& GameEngine::getInstance(const int boardWidth, const int boardHeight,
     return instance;
 }
 
+void GameEngine::setObserver(IObserver* obs) {
+    std::lock_guard lock(gameMutex);
+    this->observer = obs;
+}
+
+void GameEngine::notifyObserver() {
+    std::lock_guard lock(gameMutex);
+    if (observer) {
+        observer->onStateChanged();
+    }
+}
+
 GameEngine::~GameEngine() {
     std::lock_guard lock(gameMutex);
     tickTimer.stop();
@@ -97,19 +109,30 @@ void GameEngine::spawnNextBlock() {
         std::thread([this]{ tickTimer.stop(); }).detach();
     }
     isSoftLocked = false;
-    shouldRender = true;
+    notifyObserver();
 }
 
-bool GameEngine::needsRender() const {
-    return shouldRender;
-}
-void GameEngine::markRender() {
-    shouldRender = false;
-}
-
-std::vector<std::vector<Cell>> GameEngine::getRenderGrid() const {
+RenderData GameEngine::getRenderData() const {
     std::lock_guard lock(gameMutex);
-    return board.getRenderGrid(currentBlock.get());
+
+    RenderData data;
+
+    data.grid = board.getRenderGrid(currentBlock.get());
+
+    if (holdBlock) {
+        data.holdType = holdBlock->getType();
+    } else {
+        data.holdType = Cell::Empty;
+    }
+
+    data.nextTypes = blockFactory.peekNext(peekNextN);
+
+    data.score = scoreManager.getScore();
+    data.level = scoreManager.getLevel();
+    data.totalLinesCleared = scoreManager.getTotalLinesCleared();
+
+    data.gameState = gameState.load();
+    return data;
 }
 
 void GameEngine::tick() {
@@ -137,7 +160,7 @@ void GameEngine::tick() {
 
         }
     }
-    shouldRender = true;
+    notifyObserver();
 }
 
 void GameEngine::requestMove(const int dx) {
@@ -156,7 +179,7 @@ void GameEngine::requestMove(const int dx) {
             lockResetCount++;
         }
     }
-    shouldRender = true;
+    notifyObserver();
 }
 
 void GameEngine::requestRotate(const bool clockwise) {
@@ -175,7 +198,7 @@ void GameEngine::requestRotate(const bool clockwise) {
     Position position = currentBlock->getPosition();
 
     if (board.isValidPosition(*currentBlock, position)) {
-        shouldRender = true;
+        notifyObserver();
 
         if (isSoftLocked && lockResetCount < MAX_LOCK_RESETS) {
             lockTimeStart = std::chrono::steady_clock::now();
@@ -188,7 +211,7 @@ void GameEngine::requestRotate(const bool clockwise) {
         Position newPosition = {position.x + offset.x, position.y + offset.y};
         if (board.isValidPosition(*currentBlock, newPosition)) {
             currentBlock->move(offset.x, offset.y);
-            shouldRender = true;
+            notifyObserver();
 
             if (isSoftLocked && lockResetCount < MAX_LOCK_RESETS) {
                 lockTimeStart = std::chrono::steady_clock::now();
@@ -221,7 +244,7 @@ void GameEngine::requestHardDrop() {
 
         scoreManager.addLineClear(board.clearFullLines());
         spawnNextBlock();
-        shouldRender = true;
+        notifyObserver();
     }
 }
 
@@ -236,7 +259,7 @@ void GameEngine::requestSoftDrop() {
         currentBlock->move(0, -1);
 
         scoreManager.addSoftDropPoints();
-        shouldRender = true;
+        notifyObserver();
     }
 }
 
@@ -245,7 +268,7 @@ void GameEngine::pause() {
     if (gameState == GameState::RUNNING) {
         tickTimer.stop();
         gameState = GameState::PAUSED;
-        shouldRender = true;
+        notifyObserver();
     }
 }
 
@@ -257,7 +280,7 @@ void GameEngine::resume() {
         const int level = scoreManager.getLevel();
         const int currentInterval = calculateGravityInterval(level);
         tickTimer.start(currentInterval);
-        shouldRender = true;
+        notifyObserver();
     }
 }
 
@@ -281,7 +304,7 @@ void GameEngine::requestHold() {
         holdBlock = std::move(tempBlock);
         holdBlock->resetRotation();
     }
-    shouldRender = true;
+    notifyObserver();
 }
 
 void GameEngine::requestSave() const {
@@ -315,31 +338,6 @@ void GameEngine::updateLevelSpeed() const {
     const int newInterval = calculateGravityInterval(level);
 
     tickTimer.setInterval(newInterval);
-}
-
-std::vector<std::vector<Cell>> GameEngine::getRenderHold() {
-    auto cells = std::vector(2, std::vector(4, Cell::Empty));
-    if (holdBlock) {
-        const auto type = holdBlock->getType();
-        for (auto pos : holdBlock->getGlobalCellsAt({1, 0}))
-            cells[pos.y][pos.x] = type;
-    }
-    shouldRender = true;
-    return cells;
-}
-
-std::vector<std::vector<std::vector<Cell>>> GameEngine::getRenderNext() {
-    auto blocksTypes = blockFactory.peekNext(3);
-    std::vector<std::vector<std::vector<Cell>>> blocks;
-    for (auto blockType : blocksTypes) {
-        auto cells = std::vector(2, std::vector(4, Cell::Empty));
-        auto block = BlockFactory::createBlock(blockType);
-        for (auto pos : block->getGlobalCellsAt({1, 0}))
-            cells[pos.y][pos.x] = blockType;
-        blocks.emplace_back(cells);
-    }
-    shouldRender = true;
-    return blocks;
 }
 
 Snapshot GameEngine::createSnapshot() const {
@@ -388,5 +386,5 @@ void GameEngine::restoreFromSnapshot(const Snapshot& snapshot) {
         holdBlock.reset();
 
     blockFactory.loadFromSnapshot(snapshot);
-    shouldRender = true;
+    notifyObserver();
 }
