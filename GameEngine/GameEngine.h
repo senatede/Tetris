@@ -3,6 +3,8 @@
 #include <memory>
 #include <mutex>
 #include <chrono>
+#include "Board/Cell.h"
+#include "IObserver.h"
 
 struct Snapshot;
 class Board;
@@ -12,10 +14,19 @@ class InputHandler;
 class BlockFactory;
 class Block;
 class Timer;
-enum class Cell;
 struct Position;
 
 enum class GameState { IDLE, LOADED, RUNNING, PAUSED, GAME_OVER };
+
+struct RenderData {
+    std::vector<std::vector<Cell>> grid;
+    Cell holdType = Cell::Empty;
+    std::vector<Cell> nextTypes;
+    long long score = 0;
+    int level = 1;
+    int totalLinesCleared = 0;
+    GameState gameState = GameState::IDLE;
+};
 
 class GameEngine {
     int boardWidth, boardHeight;
@@ -39,8 +50,9 @@ class GameEngine {
     int lockResetCount = 0;
     const int MAX_LOCK_RESETS = 15;
 
-    bool shouldRender = false;
     mutable std::recursive_mutex gameMutex;
+    IObserver* observer = nullptr;
+    void notifyObserver();
 
     GameEngine(int boardWidth, int boardHeight, InputHandler& input_handler, ScoreManager& score_manager);
     ~GameEngine();
@@ -50,6 +62,8 @@ public:
     GameEngine(const GameEngine&) = delete;
     GameEngine& operator=(const GameEngine&) = delete;
     static GameEngine& getInstance(int boardWidth, int boardHeight, InputHandler& input_handler, ScoreManager& score_manager);
+
+    void setObserver(IObserver* observer);
 
     void startNewGame(int level = 1);
     void startGame();
@@ -71,11 +85,7 @@ public:
     std::pair<int, int> getBoardSize() const;
     static int calculateGravityInterval(int level) ;
 
-    bool needsRender() const;
-    void markRender();
-    std::vector<std::vector<Cell>> getRenderGrid() const;
-    std::vector<std::vector<Cell>> getRenderHold();
-    std::vector<std::vector<std::vector<Cell>>> getRenderNext();
+    RenderData getRenderData() const;
 
     Snapshot createSnapshot() const;
     void restoreFromSnapshot(const Snapshot& snapshot);

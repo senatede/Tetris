@@ -3,18 +3,22 @@ project(TetrisEngine CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
+set(SFML_DIR "/opt/homebrew/opt/sfml@2/lib/cmake/SFML")
 
+find_package(SFML 2.6 COMPONENTS system window graphics network audio REQUIRED)
 find_package(Threads REQUIRED)
 
 include_directories(
         .
         GameEngine
-        CLI
 )
+
+
 
 add_executable(tetris
         main.cpp
-        CLI/CLI.cpp
+        Renderer/Renderer.cpp
+        Renderer/Button.cpp
         GameEngine/GameEngine.cpp
         GameEngine/Timer.cpp
         GameEngine/InputHandler.cpp
@@ -46,4 +50,4 @@ add_executable(tetris
         GameEngine/Blocks/ZBlock.cpp
 )
 
-target_link_libraries(tetris PRIVATE Threads::Threads)
+target_link_libraries(tetris PRIVATE Threads::Threads sfml-system sfml-window sfml-graphics sfml-audio)

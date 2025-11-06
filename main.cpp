@@ -1,6 +1,6 @@
-#include <CLI/CLI.h>
+#include "Renderer/Renderer.h"
 
 int main() {
-    CLI().run();
+    Renderer().run();
     return 0;
 }
