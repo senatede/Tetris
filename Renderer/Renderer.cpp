@@ -14,10 +14,13 @@ Renderer::Renderer()
       gameLoadedSuccessfully(false),
       gameSavedSuccessfully(false)
 {
-    gameEngine.setObserver(this);
     window.setFramerateLimit(FPS);
     loadFont();
     loadTextures();
+}
+
+void Renderer::initializeObserver() {
+    gameEngine.setObserver(std::static_pointer_cast<IObserver>(shared_from_this()));
 }
 
 Renderer::~Renderer() {
@@ -371,13 +374,7 @@ void Renderer::renderMainMenu() {
 }
 
 void Renderer::renderPlaying() {
-    const auto renderData = gameEngine.getRenderData();
-    const auto grid = renderData.grid;
-    const auto score = renderData.score;
-    const auto level = renderData.level;
-    const auto totalLinesCleared = renderData.totalLinesCleared;
-    const auto holdPiece = renderData.holdType;
-    const auto nextPieces = renderData.nextTypes;
+    const auto& renderData = gameEngine.getRenderData();
 
     sf::Vector2f boardPosition{240.f, 75.f};
     sf::Vector2f holdPosition{90.f, 150.f};
@@ -392,8 +389,8 @@ void Renderer::renderPlaying() {
     holdBox.setOutlineColor(sf::Color::White);
     holdBox.setOutlineThickness(1.f);
     window.draw(holdBox);
-    if (holdPiece != Cell::Empty && pieceSprites.count(holdPiece)) {
-        sf::Sprite sprite = pieceSprites[holdPiece];
+    if (renderData.holdType != Cell::Empty && pieceSprites.count(renderData.holdType)) {
+        sf::Sprite sprite = pieceSprites[renderData.holdType];
         sf::FloatRect spriteBounds = sprite.getLocalBounds();
         float centerX = holdPosition.x + (holdBox.getSize().x - spriteBounds.width) / 2.f;
         float centerY = holdPosition.y + (holdBox.getSize().y - spriteBounds.height) / 2.f;
@@ -407,7 +404,7 @@ void Renderer::renderPlaying() {
     boardBox.setOutlineColor(sf::Color::White);
     boardBox.setOutlineThickness(1.f);
     window.draw(boardBox);
-    drawGrid(window, grid, boardPosition);
+    drawGrid(window, renderData.grid, boardPosition);
 
     sf::Text nextText("NEXT", font, 24);
     nextText.setPosition(nextPosition.x, nextPosition.y - 40);
@@ -418,8 +415,8 @@ void Renderer::renderPlaying() {
     nextBox.setOutlineColor(sf::Color::White);
     nextBox.setOutlineThickness(1.f);
     window.draw(nextBox);
-    for (int i = 0; i < std::min((int)nextPieces.size(), 3); ++i) {
-        Cell nextType = nextPieces[i];
+    for (int i = 0; i < std::min((int)renderData.nextTypes.size(), 3); ++i) {
+        Cell nextType = renderData.nextTypes[i];
         if (nextType != Cell::Empty && pieceSprites.count(nextType)) {
             sf::Sprite sprite = pieceSprites[nextType];
             sf::FloatRect spriteBounds = sprite.getLocalBounds();
@@ -430,15 +427,15 @@ void Renderer::renderPlaying() {
         }
     }
 
-    sf::Text scoreText("Score: " + std::to_string(score), font, 24);
+    sf::Text scoreText("Score: " + std::to_string(renderData.score), font, 24);
     scoreText.setPosition(boardPosition.x, 35);
     window.draw(scoreText);
 
-    sf::Text levelText("Level: " + std::to_string(level), font, 24);
+    sf::Text levelText("Level: " + std::to_string(renderData.level), font, 24);
     levelText.setPosition(nextPosition.x, 500);
     window.draw(levelText);
 
-    sf::Text linesText("Lines: " + std::to_string(totalLinesCleared), font, 24);
+    sf::Text linesText("Lines: " + std::to_string(renderData.totalLinesCleared), font, 24);
     linesText.setPosition(nextPosition.x, 550);
     window.draw(linesText);
 }

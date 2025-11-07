@@ -25,10 +25,11 @@ enum class ScreenState {
     QUITTING
 };
 
-class Renderer final : IObserver {
+class Renderer final : public IObserver, public std::enable_shared_from_this<Renderer> {
 public:
     Renderer();
     ~Renderer() override;
+    void initializeObserver();
     void run();
 
 private:
