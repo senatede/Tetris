@@ -1,6 +1,8 @@
 #include "Renderer/Renderer.h"
 
 int main() {
-    Renderer().run();
+    const auto renderer = std::make_shared<Renderer>();
+    renderer->initializeObserver();
+    renderer->run();
     return 0;
 }

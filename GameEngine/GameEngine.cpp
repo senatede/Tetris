@@ -35,9 +35,9 @@ GameEngine& GameEngine::getInstance(const int boardWidth, const int boardHeight,
     return instance;
 }
 
-void GameEngine::setObserver(IObserver* obs) {
+void GameEngine::setObserver(std::shared_ptr<IObserver> obs) {
     std::lock_guard lock(gameMutex);
-    this->observer = obs;
+    this->observer = std::move(obs);
 }
 
 void GameEngine::notifyObserver() {
@@ -112,27 +112,18 @@ void GameEngine::spawnNextBlock() {
     notifyObserver();
 }
 
-RenderData GameEngine::getRenderData() const {
+const RenderData& GameEngine::getRenderData() {
     std::lock_guard lock(gameMutex);
 
-    RenderData data;
+    cachedRenderData.grid = board.getRenderGrid(currentBlock.get());
+    cachedRenderData.holdType = holdBlock ? holdBlock->getType() : Cell::Empty;
+    cachedRenderData.nextTypes = blockFactory.peekNext(peekNextN);
+    cachedRenderData.score = scoreManager.getScore();
+    cachedRenderData.level = scoreManager.getLevel();
+    cachedRenderData.totalLinesCleared = scoreManager.getTotalLinesCleared();
+    cachedRenderData.gameState = gameState.load();
 
-    data.grid = board.getRenderGrid(currentBlock.get());
-
-    if (holdBlock) {
-        data.holdType = holdBlock->getType();
-    } else {
-        data.holdType = Cell::Empty;
-    }
-
-    data.nextTypes = blockFactory.peekNext(peekNextN);
-
-    data.score = scoreManager.getScore();
-    data.level = scoreManager.getLevel();
-    data.totalLinesCleared = scoreManager.getTotalLinesCleared();
-
-    data.gameState = gameState.load();
-    return data;
+    return cachedRenderData;
 }
 
 void GameEngine::tick() {

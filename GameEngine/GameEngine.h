@@ -29,7 +29,7 @@ struct RenderData {
 };
 
 class GameEngine {
-    int boardWidth, boardHeight;
+    int boardWidth = 10, boardHeight = 20;
 
     Board& board;
     ScoreManager& scoreManager;
@@ -51,8 +51,10 @@ class GameEngine {
     const int MAX_LOCK_RESETS = 15;
 
     mutable std::recursive_mutex gameMutex;
-    IObserver* observer = nullptr;
+    std::shared_ptr<IObserver> observer = nullptr;
     void notifyObserver();
+
+    RenderData cachedRenderData;
 
     GameEngine(int boardWidth, int boardHeight, InputHandler& input_handler, ScoreManager& score_manager);
     ~GameEngine();
@@ -63,7 +65,7 @@ public:
     GameEngine& operator=(const GameEngine&) = delete;
     static GameEngine& getInstance(int boardWidth, int boardHeight, InputHandler& input_handler, ScoreManager& score_manager);
 
-    void setObserver(IObserver* observer);
+    void setObserver(std::shared_ptr<IObserver> observer);
 
     void startNewGame(int level = 1);
     void startGame();
@@ -85,7 +87,7 @@ public:
     std::pair<int, int> getBoardSize() const;
     static int calculateGravityInterval(int level) ;
 
-    RenderData getRenderData() const;
+    const RenderData& getRenderData();
 
     Snapshot createSnapshot() const;
     void restoreFromSnapshot(const Snapshot& snapshot);
